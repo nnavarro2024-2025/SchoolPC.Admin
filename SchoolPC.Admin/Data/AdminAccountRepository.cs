@@ -37,7 +37,13 @@ namespace SchoolPC.Admin.Data
                     {
                         if (await reader.ReadAsync())
                         {
-                            return MapAdminFromReader(reader);
+                            var admin = MapAdminFromReader(reader);
+                            System.Diagnostics.Debug.WriteLine($"[DB] Found admin: {username}, PasswordHash length: {admin.PasswordHash?.Length ?? 0}");
+                            return admin;
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[DB] Admin not found: {username}");
                         }
                     }
                 }
@@ -80,8 +86,8 @@ namespace SchoolPC.Admin.Data
             {
                 await connection.OpenAsync();
 
-                var query = @"INSERT INTO admin_accounts (username, password_hash, full_name, role, is_active, created_at)
-                            VALUES (@username, @passwordHash, @fullName, @role, @isActive, @createdAt)";
+                var query = @"INSERT INTO admin_accounts (username, password_hash, full_name, role, is_active)
+                            VALUES (@username, @passwordHash, @fullName, @role, @isActive)";
 
                 using (var cmd = new MySqlCommand(query, connection))
                 {
@@ -90,7 +96,6 @@ namespace SchoolPC.Admin.Data
                     cmd.Parameters.AddWithValue("@fullName", admin.FullName);
                     cmd.Parameters.AddWithValue("@role", admin.Role);
                     cmd.Parameters.AddWithValue("@isActive", admin.IsActive);
-                    cmd.Parameters.AddWithValue("@createdAt", admin.CreatedAt);
 
                     await cmd.ExecuteNonQueryAsync();
                 }
@@ -111,7 +116,7 @@ namespace SchoolPC.Admin.Data
             {
                 AdminId = reader.GetInt32(adminIdOrd),
                 Username = reader.GetString(usernameOrd),
-                PasswordHash = reader.GetString(passwordHashOrd),
+                PasswordHash = reader.IsDBNull(passwordHashOrd) ? string.Empty : reader.GetString(passwordHashOrd),
                 FullName = reader.GetString(fullNameOrd),
                 Role = reader.GetString(roleOrd),
                 IsActive = reader.GetBoolean(isActiveOrd),

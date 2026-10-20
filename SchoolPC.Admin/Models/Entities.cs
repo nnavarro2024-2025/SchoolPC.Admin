@@ -29,9 +29,12 @@ namespace SchoolPC.Admin.Models
         public string PcName { get; set; } = string.Empty;
         public string StudentId { get; set; } = string.Empty;
         public string StudentName { get; set; } = string.Empty;
+        public string? StudentEmail { get; set; }
         public DateTime LoginTime { get; set; }
         public DateTime? LogoutTime { get; set; }
         public int? DurationMinutes { get; set; }
+        public string? EndReason { get; set; }
+        public DateTime? RecoveredAt { get; set; }
     }
 
     public class ProblemReport
@@ -55,13 +58,21 @@ namespace SchoolPC.Admin.Models
         public string FirstPcName { get; set; } = string.Empty;
         public string CurrentPcName { get; set; } = string.Empty;
         public string? DisplayName { get; set; }
-        public string? Location { get; set; }
         public string? IpAddress { get; set; }
-        public bool IsApproved { get; set; } = false;
         public bool IsActive { get; set; } = true;
         public DateTime FirstSeen { get; set; }
         public DateTime LastSeen { get; set; }
-        public string? Notes { get; set; }
+        public int? GroupId { get; set; }
+        public int SortOrder { get; set; } = 0;
+        public bool IsOnline { get; set; } = false;
+    }
+
+    public class PcGroup
+    {
+        public int GroupId { get; set; }
+        public string GroupName { get; set; } = string.Empty;
+        public int SortOrder { get; set; } = 0;
+        public DateTime CreatedAt { get; set; }
     }
 
     public class BannedStudent
@@ -72,16 +83,5 @@ namespace SchoolPC.Admin.Models
         public string? BannedBy { get; set; }
         public DateTime BannedAt { get; set; }
         public bool IsActive { get; set; } = true;
-    }
-
-    public class TestAccount
-    {
-        public int TestId { get; set; }
-        public string Username { get; set; } = string.Empty;
-        public string PasswordHash { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public string? Notes { get; set; }
-        public bool IsActive { get; set; } = true;
-        public DateTime CreatedAt { get; set; }
     }
 }

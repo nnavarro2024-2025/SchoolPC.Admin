@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using SchoolPC.Admin.Data;
-using SchoolPC.Admin.Hosting;
 using SchoolPC.Admin.Services;
 using SchoolPC.Admin.UI;
 
@@ -12,7 +11,7 @@ namespace SchoolPC.Admin
         ///  The main entry point for the application.
         /// </summary>
         [STAThread]
-        static async Task Main()
+        static void Main()
         {
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
@@ -23,23 +22,9 @@ namespace SchoolPC.Admin
             ConfigureServices(services);
             var serviceProvider = services.BuildServiceProvider();
 
-            // Start SignalR Hub in background
-            var signalRHost = new SignalRHostBuilder(serviceProvider);
-            var hubStopToken = new CancellationTokenSource();
-            _ = signalRHost.StartAsync("http://localhost:5000", hubStopToken.Token);
-
-            try
-            {
-                // Get LoginForm from DI and run it
-                var loginForm = serviceProvider.GetRequiredService<LoginForm>();
-                Application.Run(loginForm);
-            }
-            finally
-            {
-                // Stop SignalR Hub when app closes
-                hubStopToken.Cancel();
-                await signalRHost.StopAsync();
-            }
+            // Get LoginForm from DI and run it
+            var loginForm = serviceProvider.GetRequiredService<LoginForm>();
+            Application.Run(loginForm);
         }
 
         private static void ConfigureServices(ServiceCollection services)
@@ -69,3 +54,4 @@ namespace SchoolPC.Admin
         }
     }
 }
+

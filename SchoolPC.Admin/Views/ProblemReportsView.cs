@@ -1,56 +1,71 @@
 using SchoolPC.Admin.Services;
+using System.Diagnostics;
 using System.Windows.Forms;
 
 namespace SchoolPC.Admin.Views
 {
-    public class ProblemReportsView : UserControl
+    public partial class ProblemReportsView : UserControl
     {
         private readonly string _currentAdminUsername;
         private readonly IProblemReportService _reportService;
         private DataGridView _reportsGridView = null!;
         private ComboBox _statusFilterCombo = null!;
 
-        public ProblemReportsView(string adminUsername)
+        public ProblemReportsView(string adminUsername, IProblemReportService reportService)
         {
             _currentAdminUsername = adminUsername;
-            // TODO: Inject service properly via DI
-            _reportService = null!; // Placeholder
+            _reportService = reportService;
             InitializeComponent();
             ConfigureUI();
         }
 
-        private void InitializeComponent()
-        {
-            // Will be called by constructor
-        }
-
         private void ConfigureUI()
         {
-            Dock = DockStyle.Fill;
-            BackColor = Color.White;
-            Padding = new Padding(15);
+            this.SuspendLayout();
+            this.Dock = DockStyle.Fill;
+            this.BackColor = Color.White;
+            this.AutoScaleMode = AutoScaleMode.Font;
 
-            // Title
+            // Use TableLayoutPanel for reliable layout control
+            var mainLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 3,
+                BackColor = Color.White,
+                Padding = new Padding(15, 15, 15, 15),
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
+                AutoSize = false
+            };
+
+            // Row 0: Title
             var titleLabel = new Label
             {
                 Text = "Problem Reports",
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                Dock = DockStyle.Top,
-                Height = 40,
-                ForeColor = Color.FromArgb(0, 102, 204)
+                ForeColor = Color.FromArgb(0, 102, 204),
+                AutoSize = true,
+                Height = 50
             };
-            Controls.Add(titleLabel);
+            mainLayout.Controls.Add(titleLabel, 0, 0);
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
 
-            // Filter Panel
+            // Row 1: Filter panel
             var filterPanel = new Panel
             {
-                Dock = DockStyle.Top,
-                Height = 50,
                 BackColor = Color.FromArgb(240, 240, 240),
-                Padding = new Padding(10)
+                Height = 50,
+                AutoSize = false
             };
 
-            var statusLabel = new Label { Text = "Status:", Location = new Point(10, 12), Width = 50, Height = 25 };
+            var statusLabel = new Label
+            {
+                Text = "Status:",
+                Location = new Point(10, 12),
+                Width = 50,
+                Height = 25,
+                Font = new Font("Segoe UI", 9)
+            };
             _statusFilterCombo = new ComboBox
             {
                 Location = new Point(65, 12),
@@ -63,9 +78,10 @@ namespace SchoolPC.Admin.Views
             _statusFilterCombo.SelectedIndexChanged += (s, e) => LoadReports();
 
             filterPanel.Controls.AddRange(new Control[] { statusLabel, _statusFilterCombo });
-            Controls.Add(filterPanel);
+            mainLayout.Controls.Add(filterPanel, 0, 1);
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
 
-            // Reports DataGridView
+            // Row 2: Grid (Fill remaining space)
             _reportsGridView = new DataGridView
             {
                 Name = "ReportsGridView",
@@ -73,23 +89,40 @@ namespace SchoolPC.Admin.Views
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
-                ReadOnly = true,
+                ReadOnly = false,
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.Fixed3D,
-                ColumnHeadersHeight = 30
+                ColumnHeadersHeight = 30,
+                EnableHeadersVisualStyles = false
+            };
+
+            // Style column headers
+            _reportsGridView.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+            {
+                BackColor = Color.FromArgb(0, 102, 204),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Alignment = DataGridViewContentAlignment.MiddleCenter
             };
 
             // Columns
-            _reportsGridView.Columns.Add(new DataGridViewTextBoxColumn { Name = "PC", HeaderText = "PC Name", Width = 150 });
-            _reportsGridView.Columns.Add(new DataGridViewTextBoxColumn { Name = "Student", HeaderText = "Student Name", Width = 200 });
-            _reportsGridView.Columns.Add(new DataGridViewTextBoxColumn { Name = "Message", HeaderText = "Problem Description", Width = 300 });
-            _reportsGridView.Columns.Add(new DataGridViewTextBoxColumn { Name = "Timestamp", HeaderText = "Reported At", Width = 150 });
-            _reportsGridView.Columns.Add(new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status", Width = 100 });
-            _reportsGridView.Columns.Add(new DataGridViewButtonColumn { Name = "Action", HeaderText = "Action", Text = "Mark Resolved", Width = 120, UseColumnTextForButtonValue = true });
+            _reportsGridView.Columns.Add(new DataGridViewTextBoxColumn { Name = "PC", HeaderText = "PC Name" });
+            _reportsGridView.Columns.Add(new DataGridViewTextBoxColumn { Name = "Student", HeaderText = "Student Name" });
+            _reportsGridView.Columns.Add(new DataGridViewTextBoxColumn { Name = "Message", HeaderText = "Problem Description" });
+            _reportsGridView.Columns.Add(new DataGridViewTextBoxColumn { Name = "Timestamp", HeaderText = "Reported At" });
+            _reportsGridView.Columns.Add(new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status" });
+            _reportsGridView.Columns.Add(new DataGridViewButtonColumn { Name = "Action", HeaderText = "Action", Text = "Mark Resolved", UseColumnTextForButtonValue = true });
 
             _reportsGridView.CellClick += ReportsGridView_CellClick;
-            Controls.Add(_reportsGridView);
 
+            mainLayout.Controls.Add(_reportsGridView, 0, 2);
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));  // Auto-fill remaining space
+
+            this.Controls.Add(mainLayout);
+
+            this.ResumeLayout(true);
+
+            Debug.WriteLine("[ConfigureUI] ProblemReportsView initialized");
             LoadReports();
         }
 
@@ -99,24 +132,56 @@ namespace SchoolPC.Admin.Views
             {
                 _reportsGridView.Rows.Clear();
 
-                // Placeholder data
-                _reportsGridView.Rows.Add("LAB-PC-001", "NIKKO ANGELO P. NAVARRO", "Monitor flickering", DateTime.Now.ToString("g"), "Open", "Mark Resolved");
-                _reportsGridView.Rows.Add("LAB-PC-002", "KYLE CLANCY F. TAN", "Keyboard not working", DateTime.Now.AddHours(-2).ToString("g"), "Open", "Mark Resolved");
+                // Get the selected status filter
+                string? statusFilter = _statusFilterCombo.SelectedItem?.ToString();
+                if (statusFilter == "All")
+                {
+                    statusFilter = null;
+                }
+
+                // Fetch reports from the database using the service
+                var reports = await _reportService.GetReportsByStatusAsync(statusFilter);
+
+                // Populate grid with real data
+                foreach (var report in reports)
+                {
+                    var rowIndex = _reportsGridView.Rows.Add(
+                        report.PcName,
+                        report.StudentName,
+                        report.Message,
+                        report.CreatedAt.ToString("g"),
+                        report.Status ?? "open",
+                        "Mark Resolved"
+                    );
+
+                    // Store ReportId in the row's Tag for later retrieval
+                    _reportsGridView.Rows[rowIndex].Tag = report.ReportId;
+                }
+
+                Debug.WriteLine($"[LoadReports] Loaded {reports.Count} reports with status filter: {statusFilter ?? "null"}");
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error loading reports: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Debug.WriteLine($"[LoadReports] Error: {ex.Message}");
             }
         }
 
-        private void ReportsGridView_CellClick(object? sender, DataGridViewCellEventArgs e)
+        private async void ReportsGridView_CellClick(object? sender, DataGridViewCellEventArgs e)
         {
             if (e.ColumnIndex == _reportsGridView.Columns["Action"].Index && e.RowIndex >= 0)
             {
                 var selectedRow = _reportsGridView.Rows[e.RowIndex];
                 var status = selectedRow.Cells["Status"].Value?.ToString();
+                var reportId = selectedRow.Tag as int?;
 
-                if (status == "Resolved")
+                if (!reportId.HasValue)
+                {
+                    MessageBox.Show("Error: Could not identify report. Please refresh and try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                if (status == "resolved" || status == "Resolved")
                 {
                     MessageBox.Show("This report is already resolved.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
@@ -125,9 +190,23 @@ namespace SchoolPC.Admin.Views
                 DialogResult result = MessageBox.Show("Mark this report as resolved?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 if (result == DialogResult.Yes)
                 {
-                    // TODO: Call service to mark resolved
-                    selectedRow.Cells["Status"].Value = "Resolved";
-                    MessageBox.Show("Report marked as resolved.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    try
+                    {
+                        // Call the service to update the database
+                        await _reportService.MarkReportResolvedAsync(reportId.Value, _currentAdminUsername);
+
+                        // Update UI to reflect the change
+                        selectedRow.Cells["Status"].Value = "resolved";
+                        MessageBox.Show("Report marked as resolved.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                        // Refresh the grid to ensure data is current
+                        LoadReports();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error marking report as resolved: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        Debug.WriteLine($"[ReportsGridView_CellClick] Error: {ex.Message}");
+                    }
                 }
             }
         }

@@ -6,6 +6,7 @@ namespace SchoolPC.Admin.Services
     public interface IPcInstanceService
     {
         Task<List<PcInstance>> GetAllActivePcsAsync();
+        Task<List<PcInstance>> GetAllPcsAsync();
         Task<PcInstance?> GetPcByGuidAsync(string clientGuid);
         Task RegisterPcAsync(string clientGuid, string machineName, string ipAddress);
         Task UpdatePcAsync(PcInstance pc);
@@ -23,6 +24,11 @@ namespace SchoolPC.Admin.Services
         public async Task<List<PcInstance>> GetAllActivePcsAsync()
         {
             return await _pcRepository.GetAllActivePcsAsync();
+        }
+
+        public async Task<List<PcInstance>> GetAllPcsAsync()
+        {
+            return await _pcRepository.GetAllPcsAsync();
         }
 
         public async Task<PcInstance?> GetPcByGuidAsync(string clientGuid)
@@ -50,10 +56,9 @@ namespace SchoolPC.Admin.Services
                     ClientGuid = clientGuid,
                     FirstPcName = machineName,
                     CurrentPcName = machineName,
-                    DisplayName = machineName,  // ← DEFAULT: use machine name for display
+                    DisplayName = machineName,  // DEFAULT: use machine name for display
                     IpAddress = ipAddress,
                     IsActive = true,
-                    IsApproved = true,  // ← AUTO-APPROVE: immediate visibility (manual approval removed from scope)
                     LastSeen = DateTime.Now
                 };
                 await _pcRepository.InsertPcInstanceAsync(pc);

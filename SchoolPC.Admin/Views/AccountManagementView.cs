@@ -3,7 +3,7 @@ using System.Windows.Forms;
 
 namespace SchoolPC.Admin.Views
 {
-    public class AccountManagementView : UserControl
+    public partial class AccountManagementView : UserControl
     {
         private readonly IStudentAccountService _studentService;
         private readonly IAdminAccountService _adminService;
@@ -11,16 +11,10 @@ namespace SchoolPC.Admin.Views
 
         public AccountManagementView()
         {
-            // TODO: Inject services properly via DI
             _studentService = null!;
             _adminService = null!;
             InitializeComponent();
             ConfigureUI();
-        }
-
-        private void InitializeComponent()
-        {
-            // Will be called by constructor
         }
 
         private void ConfigureUI()

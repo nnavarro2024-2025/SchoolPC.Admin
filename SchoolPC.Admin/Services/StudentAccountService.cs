@@ -44,8 +44,7 @@ namespace SchoolPC.Admin.Services
                 PasswordHash = passwordHash,
                 FullName = fullName,
                 Email = email,
-                IsActive = true,
-                CreatedAt = DateTime.Now
+                IsActive = true
             };
 
             await _repository.InsertStudentAsync(student);
@@ -58,7 +57,6 @@ namespace SchoolPC.Admin.Services
                 StudentId = studentId,
                 Reason = reason,
                 BannedBy = bannedBy,
-                BannedAt = DateTime.Now,
                 IsActive = true
             };
 

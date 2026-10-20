@@ -1,5 +1,6 @@
 using MySqlConnector;
 using SchoolPC.Admin.Models;
+using System.Diagnostics;
 
 namespace SchoolPC.Admin.Data
 {
@@ -37,20 +38,32 @@ namespace SchoolPC.Admin.Data
 
         public async Task<List<Session>> GetSessionsByPcGuidAsync(string clientGuid, DateTime? fromDate = null, DateTime? toDate = null)
         {
+            Debug.WriteLine($"[SessionRepository.GetSessionsByPcGuidAsync] Called with GUID: {clientGuid}, FromDate: {fromDate:yyyy-MM-dd}, ToDate: {toDate:yyyy-MM-dd}");
             var sessions = new List<Session>();
 
             using (var connection = _dbFactory.CreateConnection())
             {
                 await connection.OpenAsync();
 
-                var query = "SELECT session_id, client_guid, pc_name, student_id, student_name, login_time, logout_time, duration_minutes FROM sessions WHERE client_guid = @clientGuid";
+                // JOIN students for email, select end_reason and recovered_at
+                var query = @"
+                    SELECT 
+                        s.session_id, s.client_guid, s.pc_name, 
+                        s.student_id, s.student_name, st.email,
+                        s.login_time, s.logout_time, s.duration_minutes,
+                        s.end_reason, s.recovered_at
+                    FROM sessions s
+                    JOIN students st ON st.student_id = s.student_id
+                    WHERE s.client_guid = @clientGuid";
 
                 if (fromDate.HasValue && toDate.HasValue)
                 {
-                    query += " AND login_time >= @fromDate AND login_time <= DATE_ADD(@toDate, INTERVAL 1 DAY)";
+                    // Strict < on the to_date + 1 day, so whole days are included
+                    query += " AND s.login_time >= @fromDate AND s.login_time < DATE_ADD(@toDate, INTERVAL 1 DAY)";
+                    Debug.WriteLine($"[SessionRepository.GetSessionsByPcGuidAsync] Date filter added: {fromDate:yyyy-MM-dd} to {toDate:yyyy-MM-dd}");
                 }
 
-                query += " ORDER BY login_time DESC";
+                query += " ORDER BY s.login_time DESC";
 
                 using (var cmd = new MySqlCommand(query, connection))
                 {
@@ -60,6 +73,8 @@ namespace SchoolPC.Admin.Data
                     if (toDate.HasValue)
                         cmd.Parameters.AddWithValue("@toDate", toDate.Value);
 
+                    Debug.WriteLine($"[SessionRepository.GetSessionsByPcGuidAsync] Executing query: {query}");
+
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
                         // Get ordinal positions for columns
@@ -68,28 +83,37 @@ namespace SchoolPC.Admin.Data
                         int pcNameOrd = reader.GetOrdinal("pc_name");
                         int studentIdOrd = reader.GetOrdinal("student_id");
                         int studentNameOrd = reader.GetOrdinal("student_name");
+                        int emailOrd = reader.GetOrdinal("email");
                         int loginTimeOrd = reader.GetOrdinal("login_time");
                         int logoutTimeOrd = reader.GetOrdinal("logout_time");
                         int durationMinutesOrd = reader.GetOrdinal("duration_minutes");
+                        int endReasonOrd = reader.GetOrdinal("end_reason");
+                        int recoveredAtOrd = reader.GetOrdinal("recovered_at");
 
                         while (await reader.ReadAsync())
                         {
-                            sessions.Add(new Session
+                            var session = new Session
                             {
                                 SessionId = reader.GetInt32(sessionIdOrd),
                                 ClientGuid = reader.IsDBNull(clientGuidOrd) ? null : reader.GetString(clientGuidOrd),
                                 PcName = reader.GetString(pcNameOrd),
                                 StudentId = reader.GetString(studentIdOrd),
                                 StudentName = reader.GetString(studentNameOrd),
+                                StudentEmail = reader.IsDBNull(emailOrd) ? null : reader.GetString(emailOrd),
                                 LoginTime = reader.GetDateTime(loginTimeOrd),
                                 LogoutTime = reader.IsDBNull(logoutTimeOrd) ? null : reader.GetDateTime(logoutTimeOrd),
-                                DurationMinutes = reader.IsDBNull(durationMinutesOrd) ? null : reader.GetInt32(durationMinutesOrd)
-                            });
+                                DurationMinutes = reader.IsDBNull(durationMinutesOrd) ? null : reader.GetInt32(durationMinutesOrd),
+                                EndReason = reader.IsDBNull(endReasonOrd) ? null : reader.GetString(endReasonOrd),
+                                RecoveredAt = reader.IsDBNull(recoveredAtOrd) ? null : reader.GetDateTime(recoveredAtOrd)
+                            };
+                            sessions.Add(session);
+                            Debug.WriteLine($"[SessionRepository.GetSessionsByPcGuidAsync] Row: {session.StudentName} at {session.LoginTime:yyyy-MM-dd HH:mm:ss}");
                         }
                     }
                 }
             }
 
+            Debug.WriteLine($"[SessionRepository.GetSessionsByPcGuidAsync] Returning {sessions.Count} sessions");
             return sessions;
         }
 

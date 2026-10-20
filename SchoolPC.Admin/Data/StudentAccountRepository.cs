@@ -111,8 +111,8 @@ namespace SchoolPC.Admin.Data
             {
                 await connection.OpenAsync();
 
-                var query = @"INSERT INTO students (student_id, username, password_hash, full_name, email, is_active, created_at)
-                            VALUES (@studentId, @username, @passwordHash, @fullName, @email, @isActive, @createdAt)";
+                var query = @"INSERT INTO students (student_id, username, password_hash, full_name, email, is_active)
+                            VALUES (@studentId, @username, @passwordHash, @fullName, @email, @isActive)";
 
                 using (var cmd = new MySqlCommand(query, connection))
                 {
@@ -122,7 +122,6 @@ namespace SchoolPC.Admin.Data
                     cmd.Parameters.AddWithValue("@fullName", student.FullName);
                     cmd.Parameters.AddWithValue("@email", student.Email ?? (object)DBNull.Value);
                     cmd.Parameters.AddWithValue("@isActive", student.IsActive);
-                    cmd.Parameters.AddWithValue("@createdAt", student.CreatedAt);
 
                     await cmd.ExecuteNonQueryAsync();
                 }
@@ -178,15 +177,14 @@ namespace SchoolPC.Admin.Data
             {
                 await connection.OpenAsync();
 
-                var query = @"INSERT INTO banned_students (student_id, reason, banned_by, banned_at, is_active)
-                            VALUES (@studentId, @reason, @bannedBy, @bannedAt, @isActive)";
+                var query = @"INSERT INTO banned_students (student_id, reason, banned_by, is_active)
+                            VALUES (@studentId, @reason, @bannedBy, @isActive)";
 
                 using (var cmd = new MySqlCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@studentId", ban.StudentId);
                     cmd.Parameters.AddWithValue("@reason", ban.Reason ?? (object)DBNull.Value);
                     cmd.Parameters.AddWithValue("@bannedBy", ban.BannedBy ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@bannedAt", ban.BannedAt);
                     cmd.Parameters.AddWithValue("@isActive", ban.IsActive);
 
                     await cmd.ExecuteNonQueryAsync();

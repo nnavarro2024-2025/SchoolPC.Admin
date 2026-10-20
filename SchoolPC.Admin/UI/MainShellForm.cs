@@ -1,8 +1,10 @@
 using SchoolPC.Admin.Models;
 using SchoolPC.Admin.Views;
 using SchoolPC.Admin.Services;
+using SchoolPC.Admin.Data;
 using Microsoft.Extensions.DependencyInjection;
 using System.Windows.Forms;
+using System.Diagnostics;
 
 namespace SchoolPC.Admin.UI
 {
@@ -19,6 +21,21 @@ namespace SchoolPC.Admin.UI
             _currentAdmin = admin;
             _serviceProvider = serviceProvider;
             ConfigureUI();
+            Load += MainShellForm_Load;
+        }
+
+        private void MainShellForm_Load(object? sender, EventArgs e)
+        {
+            // Set SplitterDistance in Load event (after form handle is created)
+            // Find the SplitContainer and set the splitter distance
+            foreach (Control ctrl in Controls)
+            {
+                if (ctrl is SplitContainer sc)
+                {
+                    sc.SplitterDistance = 220;
+                    break;
+                }
+            }
         }
 
         private void ConfigureUI()
@@ -33,10 +50,10 @@ namespace SchoolPC.Admin.UI
             var mainLayout = new SplitContainer
             {
                 Dock = DockStyle.Fill,
-                SplitterDistance = 220,
                 FixedPanel = FixedPanel.Panel1,
                 BorderStyle = BorderStyle.Fixed3D,
-                IsSplitterFixed = true  // ← LOCK: Prevent manual splitter drag
+                IsSplitterFixed = true,  // ← LOCK: Prevent manual splitter drag
+                Panel1MinSize = 220
             };
 
             // SIDEBAR (Left Panel) - Use FlowLayoutPanel for proper control layout and spacing
@@ -45,7 +62,7 @@ namespace SchoolPC.Admin.UI
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
-                AutoScroll = true,
+                AutoScroll = false,
                 BackColor = Color.FromArgb(240, 240, 240),
                 Padding = new Padding(10)
             };
@@ -82,7 +99,7 @@ namespace SchoolPC.Admin.UI
                 {
                     Text = text,
                     Name = name,
-                    Width = 200,
+                    Width = 190,
                     Height = 45,
                     BackColor = text == "Logout" ? Color.FromArgb(200, 50, 50) : Color.FromArgb(0, 102, 204),
                     ForeColor = Color.White,
@@ -100,8 +117,7 @@ namespace SchoolPC.Admin.UI
             _contentPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                Padding = new Padding(15)
+                BackColor = Color.White
             };
 
             mainLayout.Panel2.Controls.Add(_contentPanel);
@@ -118,9 +134,38 @@ namespace SchoolPC.Admin.UI
             SwapView(new PcLogbookListView(pcService));
         }
 
+        public async void ShowPcLogbookDetail(string clientGuid)
+        {
+            try
+            {
+                var pcService = _serviceProvider.GetRequiredService<IPcInstanceService>();
+                var sessionService = _serviceProvider.GetRequiredService<ISessionService>();
+                var pcRepository = _serviceProvider.GetRequiredService<IPcInstanceRepository>();
+
+                // Fetch the PC instance from the database
+                var pc = await pcService.GetPcByGuidAsync(clientGuid);
+
+                if (pc == null)
+                {
+                    MessageBox.Show($"PC with ID {clientGuid} not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Create detail view with full data and services
+                SwapView(new PcLogbookDetailView(pc, sessionService, pcRepository));
+            }
+            catch (Exception ex)
+            {
+                var errorMsg = $"Error loading PC details: {ex.Message}\n\nFull Exception:\n{ex}";
+                Debug.WriteLine($"[MainShellForm.ShowPcLogbookDetail] EXCEPTION: {ex}");
+                MessageBox.Show(errorMsg, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         public void ShowProblemReports()
         {
-            SwapView(new ProblemReportsView(_currentAdmin.Username));
+            var reportService = _serviceProvider.GetRequiredService<IProblemReportService>();
+            SwapView(new ProblemReportsView(_currentAdmin.Username, reportService));
         }
 
         public void ShowAccountManagement()
